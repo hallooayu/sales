@@ -197,3 +197,475 @@
     </style>
 
     
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Dark Dashboard</title>
+    
+    <!-- Chart.js & PapaParse -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-main: #0b0217;
+            --bg-panel: #16082b;
+            --bg-sidebar: #0f051e;
+            --text-main: #ffffff;
+            --text-muted: #8b7d9e;
+            --neon-cyan: #00e5ff;
+            --neon-pink: #ff007f;
+            --neon-green: #baff29;
+            --neon-purple: #9d00ff;
+            --neon-yellow: #ffc400;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 250px;
+            background-color: var(--bg-sidebar);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid rgba(255,255,255,0.05);
+        }
+        .sidebar-logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--neon-cyan);
+            margin-bottom: 40px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .menu-item {
+            padding: 12px 15px;
+            color: var(--text-muted);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            transition: 0.3s;
+            font-size: 14px;
+        }
+        .menu-item.active, .menu-item:hover {
+            color: var(--neon-pink);
+            background: rgba(255, 0, 127, 0.1);
+        }
+        .menu-section {
+            margin-top: 30px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        /* MAIN CONTENT */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        /* TOPBAR */
+        .topbar {
+            height: 70px;
+            padding: 0 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: rgba(22, 8, 43, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .search-bar {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 8px 15px;
+            border-radius: 20px;
+            color: white;
+            width: 300px;
+            outline: none;
+        }
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .avatar {
+            width: 35px;
+            height: 35px;
+            background: var(--neon-cyan);
+            border-radius: 50%;
+        }
+
+        /* DASHBOARD GRID */
+        .dashboard {
+            padding: 30px;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-auto-rows: minmax(180px, auto);
+            gap: 20px;
+        }
+
+        .panel {
+            background-color: var(--bg-panel);
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.03);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            position: relative;
+        }
+        
+        .panel-title {
+            font-size: 12px;
+            color: var(--text-muted);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+        }
+
+        /* Widget Sizing */
+        .widget-radial { grid-column: span 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .widget-text { grid-column: span 1; }
+        .widget-bars { grid-column: span 1; }
+        .widget-main-chart { grid-column: span 3; height: 300px; }
+        .widget-side-chart { grid-column: span 2; height: 300px; }
+        .widget-bottom-1 { grid-column: span 1; }
+        .widget-bottom-2 { grid-column: span 2; }
+        .widget-bottom-3 { grid-column: span 2; }
+
+        /* Typography & Custom Elements inside Panels */
+        .big-number {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--neon-cyan);
+            margin-top: 10px;
+        }
+        .big-percent {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--neon-cyan);
+            margin: 10px 0;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 100%;
+            width: 100%;
+        }
+
+        /* Custom Progress Bars */
+        .progress-container { margin-bottom: 15px; }
+        .progress-label { font-size: 11px; color: var(--text-muted); margin-bottom: 5px; display: flex; justify-content: space-between; }
+        .progress-bar { width: 100%; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: 3px; }
+        .bg-pink { background: var(--neon-pink); }
+        .bg-cyan { background: var(--neon-cyan); }
+        .bg-yellow { background: var(--neon-yellow); }
+
+        #loading {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: var(--neon-cyan); font-size: 18px; font-weight: bold; z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">
+            <span style="color:white;">≡</span> Dashboard
+        </div>
+        <a href="#" class="menu-item active">🏠 Home</a>
+        <a href="#" class="menu-item">📊 Chart</a>
+        <a href="#" class="menu-item">⭐ Apps</a>
+        <a href="#" class="menu-item">💬 Forum</a>
+        <a href="#" class="menu-item">✉️ Email</a>
+        <a href="#" class="menu-item">⚙️ Setting</a>
+
+        <div class="menu-section">PROJECTS</div>
+        <a href="#" class="menu-item">Option</a>
+        <a href="#" class="menu-item">Case</a>
+        <a href="#" class="menu-item">Local</a>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div id="loading">Memuat Data CSV...</div>
+        
+        <!-- Topbar -->
+        <header class="topbar">
+            <input type="text" class="search-bar" placeholder="Search...">
+            <div class="user-profile">
+                <span>🔔</span>
+                <span>⚙️</span>
+                <span>LOGIN</span>
+                <div class="avatar"></div>
+            </div>
+        </header>
+
+        <!-- Dashboard Grid -->
+        <div class="dashboard" id="dashboard-grid" style="opacity: 0; transition: 0.5s;">
+            
+            <!-- Top Row: Radial Charts & Stats -->
+            <div class="panel widget-radial">
+                <div class="panel-title">TOTAL CUSTOMERS</div>
+                <div style="height: 100px; width: 100px; position: relative;">
+                    <canvas id="chart-customers"></canvas>
+                </div>
+                <div class="big-number" id="val-customers">0</div>
+            </div>
+            
+            <div class="panel widget-radial">
+                <div class="panel-title">AVG ORDER VALUE</div>
+                <div style="height: 100px; width: 100px; position: relative;">
+                    <canvas id="chart-aov"></canvas>
+                </div>
+                <div class="big-number" id="val-aov" style="color: var(--neon-pink)">$0</div>
+            </div>
+            
+            <div class="panel widget-radial">
+                <div class="panel-title">AVG LIFETIME VALUE</div>
+                <div style="height: 100px; width: 100px; position: relative;">
+                    <canvas id="chart-ltv"></canvas>
+                </div>
+                <div class="big-number" id="val-ltv" style="color: var(--neon-green)">$0</div>
+            </div>
+
+            <div class="panel widget-text">
+                <div class="panel-title">CHURN PROBABILITY</div>
+                <p style="font-size: 11px; color: var(--text-muted)">Rata-rata kemungkinan pelanggan berhenti berlangganan.</p>
+                <div class="big-percent" id="val-churn">0%</div>
+            </div>
+
+            <div class="panel widget-bars">
+                <div class="panel-title">TOP CATEGORIES</div>
+                <div id="category-bars">
+                    <!-- Injected via JS -->
+                </div>
+            </div>
+
+            <!-- Middle Row: Line Chart & Bar Chart -->
+            <div class="panel widget-main-chart">
+                <div class="panel-title">LTV TREND BY SEASON</div>
+                <div class="chart-container">
+                    <canvas id="chart-main-line"></canvas>
+                </div>
+            </div>
+
+            <div class="panel widget-side-chart">
+                <div class="panel-title">REGION DISTRIBUTION</div>
+                <div class="chart-container">
+                    <canvas id="chart-region-bar"></canvas>
+                </div>
+            </div>
+
+            <!-- Bottom Row -->
+            <div class="panel widget-bottom-1">
+                <div class="panel-title">ACTIVITIES</div>
+                <p style="font-size: 11px; color: var(--text-muted); line-height: 1.6;">
+                    Data analitik interaktif ini diambil dari file CSV secara real-time di browser. Fitur termasuk evaluasi LTV, analisis Churn, dan performa kategori.
+                </p>
+            </div>
+
+            <div class="panel widget-bottom-2">
+                <div class="panel-title">PURCHASE FREQUENCY</div>
+                <div class="chart-container" style="height: 120px;">
+                    <canvas id="chart-calendar-mock"></canvas>
+                </div>
+            </div>
+
+            <div class="panel widget-bottom-3">
+                <div class="panel-title">RETENTION STRATEGY EFFECTIVENESS</div>
+                <div style="display: flex; justify-content: space-around; align-items: center; height: 120px;" id="retention-circles">
+                    <!-- Injected via JS -->
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // Set tema default Chart.js agar sesuai dengan dark mode neon
+        Chart.defaults.color = '#8b7d9e';
+        Chart.defaults.font.family = "'Poppins', sans-serif";
+        Chart.defaults.scale.grid.color = 'rgba(255, 255, 255, 0.05)';
+
+        let rawData = [];
+
+        document.addEventListener("DOMContentLoaded", () => {
+            // Load CSV
+            Papa.parse("sales_and_customer_insights.csv", {
+                download: true,
+                header: true,
+                dynamicTyping: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    rawData = results.data;
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('dashboard-grid').style.opacity = '1';
+                    
+                    processDataAndRender();
+                },
+                error: function(err) {
+                    document.getElementById('loading').innerText = "Gagal memuat file sales_and_customer_insights.csv";
+                    document.getElementById('loading').style.color = "red";
+                }
+            });
+        });
+
+        function processDataAndRender() {
+            // 1. Calculate KPIs (Top Row)
+            const totalCustomers = new Set(rawData.map(d => d.Customer_ID)).size;
+            const avgAOV = (rawData.reduce((sum, d) => sum + (d.Average_Order_Value || 0), 0) / rawData.length).toFixed(2);
+            const avgLTV = (rawData.reduce((sum, d) => sum + (d.Lifetime_Value || 0), 0) / rawData.length).toFixed(2);
+            const avgChurn = ((rawData.reduce((sum, d) => sum + (d.Churn_Probability || 0), 0) / rawData.length) * 100).toFixed(1);
+
+            document.getElementById('val-customers').innerText = totalCustomers.toLocaleString();
+            document.getElementById('val-aov').innerText = "$" + avgAOV;
+            document.getElementById('val-ltv').innerText = "$" + avgLTV;
+            document.getElementById('val-churn').innerText = avgChurn + "%";
+
+            // Render Small Doughnuts
+            renderDoughnut('chart-customers', [70, 30], ['#00e5ff', 'rgba(0,229,255,0.1)']);
+            renderDoughnut('chart-aov', [50, 50], ['#ff007f', 'rgba(255,0,127,0.1)']);
+            renderDoughnut('chart-ltv', [85, 15], ['#baff29', 'rgba(186,255,41,0.1)']);
+
+            // 2. Top Categories (Horizontal Bars)
+            let catCount = {};
+            rawData.forEach(d => {
+                if(d.Most_Frequent_Category) {
+                    catCount[d.Most_Frequent_Category] = (catCount[d.Most_Frequent_Category] || 0) + 1;
+                }
+            });
+            let sortedCats = Object.entries(catCount).sort((a, b) => b[1] - a[1]).slice(0, 3);
+            let maxCat = sortedCats[0][1];
+            let colors = ['bg-pink', 'bg-cyan', 'bg-yellow'];
+            let barHTML = '';
+            
+            sortedCats.forEach((cat, index) => {
+                let pct = (cat[1] / maxCat) * 100;
+                barHTML += `
+                <div class="progress-container">
+                    <div class="progress-label"><span>${cat[0]}</span> <span>${cat[1]}</span></div>
+                    <div class="progress-bar"><div class="progress-fill ${colors[index]}" style="width: ${pct}%"></div></div>
+                </div>`;
+            });
+            document.getElementById('category-bars').innerHTML = barHTML;
+
+            // 3. Main Line Chart (LTV by Season)
+            let seasonLTV = { 'Spring': 0, 'Summer': 0, 'Autumn': 0, 'Winter': 0 };
+            let seasonCount = { 'Spring': 0, 'Summer': 0, 'Autumn': 0, 'Winter': 0 };
+            
+            rawData.forEach(d => {
+                if(seasonLTV[d.Season] !== undefined) {
+                    seasonLTV[d.Season] += d.Lifetime_Value;
+                    seasonCount[d.Season]++;
+                }
+            });
+            let seasonAvg = Object.keys(seasonLTV).map(k => seasonLTV[k] / (seasonCount[k] || 1));
+
+            new Chart(document.getElementById('chart-main-line').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: ['Spring', 'Summer', 'Autumn', 'Winter'],
+                    datasets: [{
+                        label: 'Avg LTV ($)',
+                        data: seasonAvg,
+                        borderColor: '#ff007f',
+                        backgroundColor: 'rgba(255, 0, 127, 0.2)',
+                        borderWidth: 3,
+                        tension: 0.4, // Membuat garis melengkung (curved)
+                        fill: true,
+                        pointBackgroundColor: '#00e5ff',
+                        pointRadius: 4
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            // 4. Region Distribution (Bar Chart)
+            let regionCount = {};
+            rawData.forEach(d => {
+                if(d.Region) regionCount[d.Region] = (regionCount[d.Region] || 0) + 1;
+            });
+
+            new Chart(document.getElementById('chart-region-bar').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(regionCount),
+                    datasets: [{
+                        data: Object.values(regionCount),
+                        backgroundColor: ['#00e5ff', '#ff007f', '#baff29', '#9d00ff', '#ffc400'],
+                        borderRadius: 4
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            // 5. Retention Strategy Circles (Bottom Right)
+            let stratCount = {};
+            rawData.forEach(d => {
+                if(d.Retention_Strategy) stratCount[d.Retention_Strategy] = (stratCount[d.Retention_Strategy] || 0) + 1;
+            });
+            let stratTotal = rawData.length;
+            let stratHTML = '';
+            let circleColors = ['#00e5ff', '#baff29', '#ff007f', '#9d00ff'];
+            
+            Object.entries(stratCount).slice(0,4).forEach((strat, index) => {
+                let pct = Math.round((strat[1] / stratTotal) * 100);
+                stratHTML += `
+                <div style="text-align: center;">
+                    <div style="width: 50px; height: 50px; border-radius: 50%; border: 3px solid ${circleColors[index]}; display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; margin-bottom: 5px;">
+                        ${pct}%
+                    </div>
+                    <span style="font-size: 10px; color: var(--text-muted);">${strat[0].split(' ')[0]}</span>
+                </div>`;
+            });
+            document.getElementById('retention-circles').innerHTML = stratHTML;
+        }
+
+        // Helper untuk membuat mini doughnut chart neon
+        function renderDoughnut(id, dataArr, colors) {
+            new Chart(document.getElementById(id).getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: dataArr,
+                        backgroundColor: colors,
+                        borderWidth: 0,
+                        cutout: '80%'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { tooltip: { enabled: false }, legend: { display: false } } }
+            });
+        }
+    </script>
+</body>
+</html>
